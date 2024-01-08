@@ -29,10 +29,13 @@ add_definitions(-D_WEBSOCKETPP_CPP11_STRICT_)
 
 # Add the third-party headers directory to the search path
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/external")
+include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/external/RemoteCaptury")
 
 # Compile jsoncpp from source
 add_library(jsoncpp STATIC ${PROJECT_SOURCE_DIR}/external/jsoncpp.cpp)
 
+add_subdirectory(external/RemoteCaptury)
+
 # Build the server executable
 add_executable(server server.cpp WebsocketServer.cpp)
-target_link_libraries (server jsoncpp)
+target_link_libraries (server jsoncpp RemoteCaptury)
