@@ -1,7 +1,4 @@
 cmake_minimum_required(VERSION 3.0)
-if (APPLE)
-	set (CMAKE_CXX_STANDARD 11)
-endif (APPLE)
 
 if (OpenMP_C_FLAGS)
 	string(REPLACE ${OpenMP_C_FLAGS} "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
@@ -11,6 +8,9 @@ if (OpenMP_CXX_FLAGS)
 endif (OpenMP_CXX_FLAGS)
 
 project(RemoteCaptury)
+
+set (CMAKE_CXX_STANDARD 11)
+
 message(STATUS "working on remotecaptury library")
 include_directories(../include)
 add_library(RemoteCaptury SHARED RemoteCaptury.cpp)

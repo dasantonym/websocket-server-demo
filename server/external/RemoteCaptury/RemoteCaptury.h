@@ -21,19 +21,10 @@ extern "C" {
 CAPTURY_DLL_EXPORT int Captury_connect(const char* ip, unsigned short port);
 // in case you need to set the local port because of firewalls, etc.
 // use 0 for localPort and localStreamPort if you don't care
-// if async != 0, the function will return immediately and perform the connection attempt asynchronously
-CAPTURY_DLL_EXPORT int Captury_connect2(const char* ip, unsigned short port, unsigned short localPort, unsigned short localStreamPort, int async);
+CAPTURY_DLL_EXPORT int Captury_connect2(const char* ip, unsigned short port, unsigned short localPort, unsigned short localStreamPort);
 
 // returns 1 if successful, 0 otherwise
 CAPTURY_DLL_EXPORT int Captury_disconnect();
-
-#define CAPTURY_DISCONNECTED			0 // not connected
-#define CAPTURY_CONNECTING			1 // trying to connect
-#define CAPTURY_CONNECTED			2 // not connected
-// returns one of the above
-CAPTURY_DLL_EXPORT int Captury_getConnectionStatus();
-
-
 
 
 
@@ -113,8 +104,6 @@ CAPTURY_DLL_EXPORT int Captury_getCameras(const CapturyCamera** cameras);
 #define CAPTURY_STREAM_FOOT_CONTACT	0x0080
 #define CAPTURY_STREAM_COMPRESSED	0x0100
 #define CAPTURY_STREAM_ANGLES		0x0200
-#define CAPTURY_STREAM_SCALES		0x0400
-#define CAPTURY_STREAM_BLENDSHAPES	0x0800
 
 // returns 1 if successful, 0 otherwise
 CAPTURY_DLL_EXPORT int Captury_startStreaming(int what);
@@ -132,21 +121,12 @@ CAPTURY_DLL_EXPORT int Captury_startStreamingImagesAndAngles(int what, int32_t c
 // returns 1 if successful, 0 otherwise
 CAPTURY_DLL_EXPORT int Captury_stopStreaming();
 
-#pragma pack(push, 1)
-struct CapturyAngleData {
-	uint16_t type;
-	float value;
-};
-#pragma pack(pop)
-
 // fills the pose with the current pose for the given actor
 // returns the current pose. Captury_freePose() after use
 CAPTURY_DLL_EXPORT CapturyPose* Captury_getCurrentPoseForActor(int actorId);
 CAPTURY_DLL_EXPORT CapturyPose* Captury_getCurrentPoseAndTrackingConsistencyForActor(int actorId, int* tc);
 CAPTURY_DLL_EXPORT CapturyPose* Captury_getCurrentPose(int actorId);
 CAPTURY_DLL_EXPORT CapturyPose* Captury_getCurrentPoseAndTrackingConsistency(int actorId, int* tc);
-// *numAngles = number of angles returned
-CAPTURY_DLL_EXPORT CapturyAngleData* Captury_getCurrentAngles(int actorId, int* numAngles);
 
 // simple function for releasing memory of a pose
 CAPTURY_DLL_EXPORT void Captury_freePose(CapturyPose* pose);
@@ -158,6 +138,13 @@ typedef void (*CapturyNewPoseCallback)(CapturyActor*, CapturyPose*, int tracking
 // try to be quick in the callback
 // returns 1 if successful otherwise 0
 CAPTURY_DLL_EXPORT int Captury_registerNewPoseCallback(CapturyNewPoseCallback callback);
+
+#pragma pack(push, 1)
+struct CapturyAngleData {
+	uint16_t	type;
+	float		value;
+};
+#pragma pack(pop)
 
 typedef void (*CapturyNewAnglesCallback)(const CapturyActor*, int numAngles, struct CapturyAngleData* values);
 
@@ -429,7 +416,6 @@ typedef enum { capturyActors = 1, capturyActor = 2,
 	       capturyGetTime2 = 68, capturyTime2 = 69,
 	       capturyAngles = 70,
 	       capturyStartRecording2 = 71, capturyStartRecordingAck2 = 72,
-	       capturyHello = 73, // handshake finished
 	       capturyError = 0 } CapturyPacketTypes;
 
 // returns a string for nicer error messages
@@ -477,7 +463,7 @@ struct CapturyJointPacket3 {
 	int32_t		parent;
 	float		offset[3];
 	float		orientation[3];
-	float		scale[3];	// if scale[0] == -1: this is a blend shape
+	float		scale[3];
 	char		name[];		// zero terminated joint name
 };
 
@@ -557,33 +543,6 @@ struct CapturyStreamPacket1 {
 	uint16_t	angles[];
 };
 
-// sent to server
-struct CapturyStreamPacketTcp {
-	int32_t		type;		// capturyStream
-	int32_t		size;		// size of full message including type and size
-
-	int32_t		what;		// CAPTURY_STREAM_POSES or CAPTURY_STREAM_NOTHING
-	int32_t		cameraId;	// valid if what & CAPTURY_STREAM_IMAGES
-
-	uint32_t	ip;		// where to stream to
-	uint16_t	port;
-};
-
-// sent to server
-struct CapturyStreamPacket1Tcp {
-	int32_t		type;		// capturyStream
-	int32_t		size;		// size of full message including type and size
-
-	int32_t		what;		// CAPTURY_STREAM_POSES or CAPTURY_STREAM_NOTHING
-	int32_t		cameraId;	// valid if what & CAPTURY_STREAM_IMAGES
-
-	uint32_t	ip;		// where to stream to
-	uint16_t	port;
-
-	uint16_t	numAngles;
-	uint16_t	angles[];
-};
-
 // sent to client
 // as a reply to CapturyRequestPacket = capturyDaySessionShot
 struct CapturyDaySessionShotPacket {
@@ -611,7 +570,7 @@ struct CapturyPosePacket {
 
 	int32_t		actor;
 	uint64_t	timestamp;
-	int32_t		numValues; // 6 * numJoints + numBlendShapes + (numJoints if scale is enabled)
+	int32_t		numValues; // multiple of 6
 	float		values[];
 };
 
@@ -627,7 +586,7 @@ struct CapturyPosePacket2 {
 	uint8_t		scalingProgress; // [0 .. 100]
 	uint8_t		flags;     // CAPTURY_LEFT_FOOT_ON_GROUND | CAPTURY_RIGHT_FOOT_ON_GROUND
 	uint8_t		reserved;  // 0 for now
-	int32_t		numValues; // 6 * numJoints + numBlendShapes + (numJoints if scale is enabled)
+	int32_t		numValues; // multiple of 6
 	float		values[];
 };
 
