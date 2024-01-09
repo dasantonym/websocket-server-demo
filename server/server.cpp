@@ -107,6 +107,9 @@ int main(int argc, char* argv[])
 		string input;
 		while (1)
 		{
+            const struct CapturyActor* actors;
+            int numActors = Captury_getActors(&actors);
+
 			//Read user input from stdin
 			std::getline(std::cin, input);
 			
